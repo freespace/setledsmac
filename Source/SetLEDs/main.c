@@ -38,6 +38,8 @@ void parseOptions(int argc, const char * argv[])
             changes[kHIDUsage_LED_NumLock] = On;
         else if (strcasecmp(argv[i], "-num") == 0)
             changes[kHIDUsage_LED_NumLock] = Off;
+        else if (strcasecmp(argv[i], "^num") == 0)
+            changes[kHIDUsage_LED_NumLock] = Toggle;
         
         // Caps lock
         else if (strcasecmp(argv[i], "+caps") == 0)
@@ -69,7 +71,7 @@ void parseOptions(int argc, const char * argv[])
 
 void explainUsage()
 {
-    printf("Usage:\tsetleds [-v] [-name wildcard] [[+|-][ num | caps | scroll]]\n"
+    printf("Usage:\tsetleds [-v] [-name wildcard] [[+|-|^][ num | caps | scroll]]\n"
            "Thus,\tsetleds +caps -num\n"
            "will set CapsLock, clear NumLock and leave ScrollLock unchanged.\n"
            "Any leds changed are reported for each keyboard.\n"
@@ -111,7 +113,16 @@ void setKeyboard(struct __IOHIDDevice *device, CFDictionaryRef keyboardDictionar
 
                 // Should we try to set the led?
                 if (changes[led] != NoChange && changes[led] != current) {
-                    IOHIDValueRef newValue = IOHIDValueCreateWithIntegerValue(kCFAllocatorDefault, element, 0, changes[led]);
+                    IOHIDValueRef newValue;
+                    if (changes[led] == Toggle) {
+                      long newstate;
+                      if (current) newstate = 0;
+                      else newstate = 1;
+                      newValue = IOHIDValueCreateWithIntegerValue(kCFAllocatorDefault, element, 0, newstate);
+                    }
+                    else {
+                      newValue = IOHIDValueCreateWithIntegerValue(kCFAllocatorDefault, element, 0, changes[led]);
+                    }
                     if (newValue) {
                         IOReturn changeResult = IOHIDDeviceSetValue(device, element, newValue);
 
